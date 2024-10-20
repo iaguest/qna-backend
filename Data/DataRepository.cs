@@ -19,30 +19,30 @@ namespace QandA.Data
             _connectionString = configuration["ConnectionStrings:DefaultConnection"];
         }
 
-        public void DeleteQuestion(int questionId)
+        public async Task DeleteQuestion(int questionId)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                connection.Open();
-                connection.Execute(
+                await connection.OpenAsync();
+                await connection.ExecuteAsync(
                     @"EXEC dbo.Question_Delete
                      @QuestionId = @QuestionId",
                     new { QuestionId = questionId });
             }
         }
 
-        public AnswerGetResponse GetAnswer(int answerId)
+        public async Task<AnswerGetResponse> GetAnswer(int answerId)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                connection.Open();
-                return connection.QueryFirstOrDefault<AnswerGetResponse>(
+                await connection.OpenAsync();
+                return await connection.QueryFirstOrDefaultAsync<AnswerGetResponse>(
                     @"EXEC dbo.Answer_Get_ByAnswerId @AnswerId = @AnswerId",
                     new { AnswerId = answerId });
             }
         }
 
-        public QuestionGetSingleResponse GetQuestion(int questionId)
+        public async Task<QuestionGetSingleResponse> GetQuestion(int questionId)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
@@ -60,8 +60,8 @@ namespace QandA.Data
                 //}
 
                 //return question;
-
-                using (GridReader results = connection.QueryMultiple(
+                await connection.OpenAsync();
+                using (GridReader results = await connection.QueryMultipleAsync(
                     @"EXEC dbo.Question_GetSingle
                       @QuestionId = @QuestionId;
                     EXEC dbo.Answer_Get_ByQuestionId
@@ -69,32 +69,32 @@ namespace QandA.Data
                     new { QuestionId = questionId }
                     ))
                 {
-                    var question = results.Read<QuestionGetSingleResponse>().FirstOrDefault();
+                    var question = (await results.ReadAsync<QuestionGetSingleResponse>()).FirstOrDefault();
                     if (question != null)
                     {
                         question.Answers =
-                            results.Read<AnswerGetResponse>().ToList();
+                            (await results.ReadAsync<AnswerGetResponse>()).ToList();
                     }
                     return question;
                 }
             }
         }
 
-        public System.Collections.Generic.IEnumerable<QuestionGetManyResponse> GetQuestions()
+        public async Task<IEnumerable<QuestionGetManyResponse>> GetQuestions()
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                connection.Open();
-                return connection.Query<QuestionGetManyResponse>(
+                await connection.OpenAsync();
+                return await connection.QueryAsync<QuestionGetManyResponse>(
                     @"EXEC dbo.Question_GetMany");
             }
         }
 
-        public IEnumerable<QuestionGetManyResponse> GetQuestionsWithAnswers()
+        public async Task<IEnumerable<QuestionGetManyResponse>> GetQuestionsWithAnswers()
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                connection.Open();
+                await connection.OpenAsync();
 
                 //var questions =
                 //    connection.Query<QuestionGetManyResponse>(
@@ -112,8 +112,8 @@ namespace QandA.Data
 
                 var questionDictionary =
                     new Dictionary<int, QuestionGetManyResponse>();
-                return connection
-                    .Query<
+                return (await connection
+                    .QueryAsync<
                         QuestionGetManyResponse,
                         AnswerGetResponse,
                         QuestionGetManyResponse>(
@@ -132,36 +132,36 @@ namespace QandA.Data
                               question.Answers.Add(a);
                               return question;
                           }, splitOn: "QuestionId"
-                          )
+                          ))
                         .Distinct()
                         .ToList();
             }
         }
 
-        public System.Collections.Generic.IEnumerable<QuestionGetManyResponse> GetQuestionsBySearch(string search)
+        public async Task<IEnumerable<QuestionGetManyResponse>> GetQuestionsBySearch(string search)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                connection.Open();
-                return connection.Query<QuestionGetManyResponse>(
+                await connection.OpenAsync();
+                return await connection.QueryAsync<QuestionGetManyResponse>(
                     @"EXEC dbo.Question_GetMany_BySearch @Search = @Search",
                     new {Search = search});
             }
         }
 
-        public IEnumerable<QuestionGetManyResponse> GetQuestionsBySearchWithPaging(
+        public async Task<IEnumerable<QuestionGetManyResponse>> GetQuestionsBySearchWithPaging(
             string search, int pageNumber, int pageSize)
         {
             using (var connection = new SqlConnection( _connectionString))
             {
-                connection.Open();
+                await connection.OpenAsync();
                 var parameters = new
                 {
                     Search = search,
                     PageNumber = pageNumber,
                     PageSize = pageSize
                 };
-                return connection.Query<QuestionGetManyResponse>(
+                return await connection.QueryAsync<QuestionGetManyResponse>(
                     @"EXEC dbo.Question_GetMany_BySearch_WithPaging
                       @Search = @Search,
                       @PageNumber = @PageNumber,
@@ -169,7 +169,7 @@ namespace QandA.Data
             }
         }
 
-        public async Task<IEnumerable<QuestionGetManyResponse>> GetUnansweredQuestionsAsync()
+        public async Task<IEnumerable<QuestionGetManyResponse>> GetUnansweredQuestions()
         {
             using (var connection = new SqlConnection(_connectionString))
             {
@@ -180,12 +180,12 @@ namespace QandA.Data
             }
         }
 
-        public AnswerGetResponse PostAnswer(AnswerPostFullRequest answer)
+        public async Task<AnswerGetResponse> PostAnswer(AnswerPostFullRequest answer)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                connection.Open();
-                return connection.QueryFirst<AnswerGetResponse>(
+                await connection.OpenAsync();
+                return await connection.QueryFirstAsync<AnswerGetResponse>(
                     @"EXEC dbo.Answer_Post
                      @QuestionId = @QuestionId, @Content = @Content,
                      @UserId = @UserId, @UserName = @UserName,
@@ -194,42 +194,42 @@ namespace QandA.Data
             }
         }
 
-        public QuestionGetSingleResponse PostQuestion(QuestionPostFullRequest question)
+        public async Task<QuestionGetSingleResponse> PostQuestion(QuestionPostFullRequest question)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                connection.Open();
-                var questionId = connection.QueryFirst<int>(
+                await connection.OpenAsync();
+                var questionId = await connection.QueryFirstAsync<int>(
                     @"EXEC dbo.Question_Post
                       @Title = @Title, @Content = @Content,
                       @UserId = @UserId, @UserName = @UserName,
                       @Created = @Created", question);
 
-                return GetQuestion(questionId);
+                return await GetQuestion(questionId);
             }
         }
 
-        public QuestionGetSingleResponse PutQuestion(int questionId, QuestionPutRequest question)
+        public async Task<QuestionGetSingleResponse> PutQuestion(int questionId, QuestionPutRequest question)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                connection.Open();
-                connection.Execute(
+                await connection.OpenAsync();
+                await connection.ExecuteAsync(
                     @"EXEC dbo.Question_Put
                       @QuestionId = @QuestionId, @Title = @Title,
                        @Content = @Content",
                     new { QuestionId = questionId, question.Title, question.Content });
 
-                return GetQuestion(questionId);
+                return await GetQuestion(questionId);
             }
          }
 
-        public bool QuestionExists(int questionId)
+        public async Task<bool> QuestionExists(int questionId)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                connection.Open();
-                return connection.QueryFirst<bool>(
+                await connection.OpenAsync();
+                return await connection.QueryFirstAsync<bool>(
                     @"EXEC dbo.Question_Exists @QuestionId = @QuestionId",
                     new {QuestionId = questionId});
             }
