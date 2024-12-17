@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using QandA.Authorization;
 using QandA.Data;
+using System;
 
 namespace QandA
 {
@@ -90,6 +91,18 @@ namespace QandA
             {
                 app.UseHttpsRedirection();
             }
+
+            //// Custom middleware to log headers
+            //app.Use(async (context, next) =>
+            //{
+            //    Console.WriteLine("Incoming Request Headers:");
+            //    foreach (var header in context.Request.Headers)
+            //    {
+            //        Console.WriteLine($"{header.Key}: {header.Value}");
+            //    }
+
+            //    await next.Invoke(); // Call the next middleware
+            //});
 
             app.UseRouting();
             app.UseCors("CorsPolicy");
